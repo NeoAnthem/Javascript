@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Retro Arcade Guess Game</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+body {
+  background: black;
+  color: #00ffcc;
+  font-family: 'Press Start 2P', cursive;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  text-align: center;
+  overflow: hidden;
+}
+
+h1 {
+  font-size: 24px;
+  text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff;
+  animation: flicker 2s infinite;
+}
+
+#game-area, #start-screen, #game-over-screen {
+  background: rgba(0, 0, 0, 0.85);
+  border: 4px solid #ff00ff;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px #00ffcc, 0 0 40px #ff00ff;
+  width: 400px;
+  margin: 20px auto;
+}
+
+input, button, select {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 14px;
+  padding: 10px;
+  margin: 10px;
+  border: none;
+  border-radius: 5px;
+}
+
+input { width: 100px; text-align: center; }
+
+button {
+  background: #ff00ff;
+  color: white;
+  cursor: pointer;
+  box-shadow: 0 0 10px #ff00ff;
+  transition: 0.2s;
+}
+
+button:hover {
+  background: #00ffcc;
+  box-shadow: 0 0 15px #00ffcc;
+}
+
+#message, #status, #finalScore, #highScoreEnd {
+  margin-top: 20px;
+  font-size: 14px;
+  color: #00ffcc;
+  text-shadow: 0 0 5px #00ffcc;
+}
+
+/* Neon flash animation */
+.flash {
+  animation: flashAnim 0.5s infinite alternate;
+}
+
+@keyframes flashAnim {
+  0% { color: #00ffcc; text-shadow: 0 0 5px #00ffcc, 0 0 10px #00ffcc; }
+  50% { color: #ff00ff; text-shadow: 0 0 10px #ff00ff, 0 0 20px #ff00ff; }
+  100% { color: #ffff00; text-shadow: 0 0 15px #ffff00, 0 0 30px #ffff00; }
+}
+
+@keyframes flicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: 0.3; }
+}
+
+/* Arcade grid background */
+.grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-size: 40px 40px;
+  background-image:
+    linear-gradient(to right, rgba(0,255,204,0.2) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,0,255,0.2) 1px, transparent 1px);
+  z-index: -1;
+  animation: moveGrid 10s linear infinite;
+}
+
+@keyframes moveGrid {
+  from { background-position: 0 0; }
+  to { background-position: 40px 40px; }
+}
+
+.blink { animation: blink 1s infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* Lives hearts */
+#lives {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+.heart {
+  color: red;
+  text-shadow: 0 0 5px red, 0 0 10px red;
+  animation: heartBlink 1s infinite;
+}
+@keyframes heartBlink {
+  0%, 50%, 100% { opacity: 1; transform: scale(1); }
+  25%, 75% { opacity: 0.6; transform: scale(1.2); }
+}
+
+/* Coin animation */
+#scoreCounter {
+  font-size: 18px;
+  color: yellow;
+  text-shadow: 0 0 5px yellow, 0 0 15px yellow;
+  animation: coinFlash 1s infinite alternate;
+}
+@keyframes coinFlash {
+  0% { color: yellow; text-shadow: 0 0 5px yellow, 0 0 10px yellow; }
+  50% { color: gold; text-shadow: 0 0 10px gold, 0 0 20px gold; }
+  100% { color: yellow; text-shadow: 0 0 5px yellow, 0 0 15px yellow; }
+}
+</style>
+</head>
+<body>
+
+<div class="grid"></div>
+<h1>🎮 Retro Arcade Guess Game 🎮</h1>
+
+<!-- Start Screen -->
+<div id="start-screen">
+  <p class="blink">▶ INSERT COIN ◀</p>
+  <p>Select Difficulty:</p>
+  <select id="difficulty">
+    <option value="50">Easy (1-50)</option>
+    <option value="100">Medium (1-100)</option>
+    <option value="500">Hard (1-500)</option>
+  </select>
+  <br>
+  <button onclick="startGame()">Start Game</button>
+  <p id="highScoreDisplay"></p>
+</div>
+
+<!-- Game Area -->
+<div id="game-area" style="display:none;">
+  <div id="lives"></div>
+  <div id="scoreCounter"></div>
+  <p>Guess the number between <span id="range"></span></p>
+  <input type="number" id="guessInput" placeholder="Your Guess">
+  <button onclick="makeGuess()">Guess</button>
+  <p id="message"></p>
+</div>
+
+<!-- Game Over Screen -->
+<div id="game-over-screen" style="display:none;">
+  <h2 style="color:red;">💀 GAME OVER 💀</h2>
+  <p id="finalScore"></p>
+  <p id="highScoreEnd"></p>
+  <button onclick="restartGame()">PLAY AGAIN</button>
+</div>
+
+<!-- Sounds -->
+<audio id="coinSound" src="https://freesound.org/data/previews/320/320181_5260877-lq.mp3"></audio>
+<audio id="correctSound" src="https://freesound.org/data/previews/337/337049_5858295-lq.mp3"></audio>
+<audio id="wrongSound" src="https://freesound.org/data/previews/198/198841_2859973-lq.mp3"></audio>
+<audio id="gameOverSound" src="https://freesound.org/data/previews/170/170905_2394240-lq.mp3"></audio>
+
+<script>
+let target, max, lives, score, highScore;
+const coinSound = document.getElementById("coinSound");
+const correctSound = document.getElementById("correctSound");
+const wrongSound = document.getElementById("wrongSound");
+const gameOverSound = document.getElementById("gameOverSound");
+
+highScore = localStorage.getItem("retroHighScore") || 0;
+document.getElementById("highScoreDisplay").innerText = `🏆 High Score: ${highScore}`;
+
+function startGame() {
+  max = parseInt(document.getElementById("difficulty").value);
+  target = Math.floor(Math.random() * max) + 1;
+  lives = 3;
+  score = 0;
+
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("game-area").style.display = "block";
+  document.getElementById("game-over-screen").style.display = "none";
+
+  document.getElementById("range").innerText = `1 and ${max}`;
+  updateLives();
+  updateScore();
+  document.getElementById("message").innerText = "Game started! 🎉";
+  coinSound.play();
+}
+
+function makeGuess() {
+  let guess = parseInt(document.getElementById("guessInput").value);
+  if (!guess) {
+    document.getElementById("message").innerText = "⚠️ Enter a number!";
+    return;
+  }
+
+  const messageEl = document.getElementById("message");
+
+  if (guess === target) {
+    score++;
+    messageEl.innerHTML = `🎉 Correct! Number was ${target}. +1 Score`;
+    messageEl.classList.add("flash");
+    correctSound.play();
+    target = Math.floor(Math.random() * max) + 1;
+  } else {
+    lives--;
+    messageEl.classList.remove("flash");
+    messageEl.innerText = guess > target ? "⬇️ Too high!" : "⬆️ Too low!";
+    wrongSound.play();
+  }
+
+  updateLives();
+  updateScore();
+
+  if (lives <= 0) endGame();
+}
+
+function updateLives() {
+  const livesEl = document.getElementById("lives");
+  livesEl.innerHTML = '❤️ '.repeat(lives);
+}
+
+function updateScore() {
+  const scoreEl = document.getElementById("scoreCounter");
+  scoreEl.innerText = `💰 Score: ${score}`;
+}
+
+function endGame() {
+  document.getElementById("game-area").style.display = "none";
+  document.getElementById("game-over-screen").style.display = "block";
+  const finalScoreEl = document.getElementById("finalScore");
+  const highScoreEndEl = document.getElementById("highScoreEnd");
+
+  finalScoreEl.innerText = `Your final score: ⭐ ${score}`;
+  if (score > highScore) {
+    highScore = score;
+    localStorage.setItem("retroHighScore", highScore);
+    highScoreEndEl.innerText = `🏆 New High Score! ⭐ ${highScore}`;
+    highScoreEndEl.classList.add("flash");
+  } else {
+    highScoreEndEl.innerText = `🏆 High Score: ${highScore}`;
+    highScoreEndEl.classList.remove("flash");
+  }
+
+  gameOverSound.play();
+}
+
+function restartGame() {
+  document.getElementById("start-screen").style.display = "block";
+  document.getElementById("game-over-screen").style.display = "none";
+  document.getElementById("highScoreDisplay").innerText = `🏆 High Score: ${highScore}`;
+}
+</script>
+</body>
+</html>
